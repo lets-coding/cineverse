@@ -1,0 +1,310 @@
+// This is your Prisma schema file.
+// Supports SQLite for zero-setup local development and testing,
+// and can be switched to PostgreSQL (e.g. Neon, Supabase, Render) for production.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  passwordHash String
+  name         String
+  role         String             @default("USER") // USER, ADMIN
+  avatar       String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  reviews      Review[]
+  watchHistory WatchHistory[]
+  favorites    Favorite[]
+  watchlist    Watchlist[]
+  activityLogs AdminActivityLog[]
+
+  @@map("users")
+}
+
+model Movie {
+  id              String            @id @default(uuid())
+  title           String
+  originalTitle   String?
+  slug            String            @unique
+  description     String
+  synopsis        String
+  releaseYear     Int
+  releaseDate     String?
+  contentType     String            @default("MOVIE") // MOVIE, SERIES, SHORT_FILM, DOCUMENTARY
+  runtime         Int               // in minutes
+  ageRating       String            @default("PG-13")
+  externalRating  Float?
+  ratingSource    String?           @default("IMDb")
+  posterUrl       String
+  backdropUrl     String
+  trailerUrl      String?
+  searchKeywords  String?
+  isFeatured      Boolean           @default(false)
+  isPublished     Boolean           @default(true)
+  downloadEnabled Boolean           @default(true)
+  seoTitle        String?
+  seoDescription  String?
+  viewsCount      Int               @default(0)
+  downloadsCount  Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  genres          MovieGenre[]
+  countries       MovieCountry[]
+  industries      MovieIndustry[]
+  languages       MovieLanguage[]
+  credits         MovieCredit[]
+  videoSources    VideoSource[]
+  subtitleTracks  SubtitleTrack[]
+  downloadSources DownloadSource[]
+  watchHistory    WatchHistory[]
+  favorites       Favorite[]
+  watchlist       Watchlist[]
+  reviews         Review[]
+
+  @@index([slug])
+  @@index([releaseYear])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@map("movies")
+}
+
+model Genre {
+  id     String       @id @default(uuid())
+  name   String       @unique
+  slug   String       @unique
+  movies MovieGenre[]
+
+  @@map("genres")
+}
+
+model MovieGenre {
+  id      String @id @default(uuid())
+  movieId String
+  genreId String
+
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, genreId])
+  @@map("movie_genres")
+}
+
+model Country {
+  id     String         @id @default(uuid())
+  name   String         @unique
+  code   String         @unique
+  movies MovieCountry[]
+
+  @@map("countries")
+}
+
+model MovieCountry {
+  id        String  @id @default(uuid())
+  movieId   String
+  countryId String
+
+  movie     Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, countryId])
+  @@map("movie_countries")
+}
+
+model Industry {
+  id     String          @id @default(uuid())
+  name   String          @unique
+  slug   String          @unique
+  movies MovieIndustry[]
+
+  @@map("industries")
+}
+
+model MovieIndustry {
+  id         String   @id @default(uuid())
+  movieId    String
+  industryId String
+
+  movie      Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, industryId])
+  @@map("movie_industries")
+}
+
+model Language {
+  id     String          @id @default(uuid())
+  name   String          @unique
+  code   String          @unique
+  movies MovieLanguage[]
+
+  @@map("languages")
+}
+
+model MovieLanguage {
+  id         String   @id @default(uuid())
+  movieId    String
+  languageId String
+  isAudio    Boolean  @default(true)
+  isSubtitle Boolean  @default(false)
+
+  movie      Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, languageId, isAudio, isSubtitle])
+  @@map("movie_languages")
+}
+
+model Person {
+  id        String        @id @default(uuid())
+  name      String
+  role      String?       // ACTOR, DIRECTOR, WRITER, PRODUCER
+  avatarUrl String?
+  credits   MovieCredit[]
+
+  @@map("people")
+}
+
+model MovieCredit {
+  id            String  @id @default(uuid())
+  movieId       String
+  personId      String
+  role          String  // ACTOR, DIRECTOR, WRITER, PRODUCER
+  characterName String?
+  order         Int     @default(0)
+
+  movie         Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person        Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+  @@index([personId])
+  @@map("movie_credits")
+}
+
+model VideoSource {
+  id           String   @id @default(uuid())
+  movieId      String
+  format       String   @default("hls") // hls, mp4, webm
+  streamUrl    String
+  qualityLabel String   @default("Auto") // Auto, 1080p, 720p, 480p, 4K
+  isPrimary    Boolean  @default(false)
+  duration     Int?     // duration in seconds
+
+  movie        Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+  @@map("video_sources")
+}
+
+model SubtitleTrack {
+  id        String  @id @default(uuid())
+  movieId   String
+  language  String  // e.g. "en", "es", "fr"
+  label     String  // e.g. "English", "Spanish"
+  vttUrl    String
+  isDefault Boolean @default(false)
+
+  movie     Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+  @@map("subtitle_tracks")
+}
+
+model DownloadSource {
+  id             String  @id @default(uuid())
+  movieId        String
+  qualityLabel   String  // e.g. "1080p Full HD", "720p HD", "4K Ultra HD"
+  resolution     String  // e.g. "1920x1080"
+  fileSize       String  // e.g. "1.8 GB"
+  format         String  @default("mp4") // mp4, mkv
+  downloadUrl    String
+  accessType     String  @default("PUBLIC") // PUBLIC, SIGNED
+  downloadsCount Int     @default(0)
+
+  movie          Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+  @@map("download_sources")
+}
+
+model WatchHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  movieId         String
+  progressSeconds Int      @default(0)
+  durationSeconds Int      @default(0)
+  completed       Boolean  @default(false)
+  lastWatchedAt   DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@map("watch_history")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  movieId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@map("favorites")
+}
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  movieId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@map("watchlist")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  movieId   String
+  rating    Int      // 1 to 10
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@map("reviews")
+}
+
+model AdminActivityLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  action     String   // e.g., "CREATE_MOVIE", "UPDATE_MOVIE", "DELETE_MOVIE", "PUBLISH_MOVIE"
+  entityType String   // e.g., "Movie", "Genre", "User"
+  entityId   String?
+  details    String?  // JSON string or summary
+  createdAt  DateTime @default(now())
+
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_activity_logs")
+}

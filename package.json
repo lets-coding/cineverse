@@ -1,0 +1,18 @@
+{
+  "name": "cineverse",
+  "version": "1.0.0",
+  "description": "CineVerse - Complete Movie Streaming & Download Website with Admin Panel",
+  "scripts": {
+    "server:dev": "npm --prefix server run dev",
+    "client:dev": "npm --prefix client run dev",
+    "server:build": "npm --prefix server run build",
+    "client:build": "npm --prefix client run build",
+    "build": "npm run server:build && npm run client:build",
+    "db:push": "npm --prefix server run prisma:push",
+    "db:seed": "npm --prefix server run prisma:seed",
+    "test": "npm --prefix server test"
+  },
+  "keywords": ["movie", "streaming", "hls", "react", "vite", "express", "prisma", "admin-panel"],
+  "author": "CineVerse Team",
+  "license": "MIT"
+}
